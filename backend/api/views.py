@@ -124,6 +124,7 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
                 author=author)
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -178,6 +179,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 user=user)
             favorite_recipe.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return
 
     @action(
         methods=['post', 'delete'],
@@ -204,6 +206,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 user=user)
             shopping_cart.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
+        return
 
     @action(
         methods=['get'],
