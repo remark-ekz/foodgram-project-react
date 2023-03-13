@@ -1,13 +1,7 @@
 from django.contrib import admin
 
-from .models import (
-    Tags,
-    Recipes,
-    Ingredients,
-    CountIngredients,
-    FavoriteRecipes,
-    ShoppingCart
-    )
+from .models import (CountIngredients, FavoriteRecipes, Ingredients, Recipes,
+                     ShoppingCart, Tags)
 
 
 @admin.register(Tags)
@@ -29,7 +23,7 @@ class IngredientsAdmin(admin.ModelAdmin):
     list_display = (
         'pk',
         'name',
-        'measure_unit')
+        'measurement_unit')
     list_editable = ('name',)
     search_fields = ('name',)
 

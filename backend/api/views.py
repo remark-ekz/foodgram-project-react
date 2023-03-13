@@ -1,52 +1,39 @@
-from rest_framework import filters, status, viewsets
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import action
-from django.shortcuts import get_object_or_404
-from rest_framework.response import Response
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import mixins
+from recipes.models import (CountIngredients, FavoriteRecipes, Ingredients,
+                            Recipes, ShoppingCart, Tags)
+from rest_framework import filters, mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from users.models import Subscriptions, User
 
-from .permissions import ObjectIsAuthenticated
-from users.models import User, Subscriptions
-from recipes.models import (
-    CountIngredients,
-    Tags,
-    Ingredients,
-    Recipes,
-    FavoriteRecipes,
-    ShoppingCart,
-    )
-from .serializers import (
-    CustomUserSerializer,
-    SetPasswordSerializer,
-    SubscribeSerializer,
-    TagSerializer,
-    IngredientSerializer,
-    RecipesReadSerializer,
-    RecipesWriteSerializer,
-    FavoriteSerializer,
-    ShoppingSerializer,
-    )
-from .filters import CustomRecipesFilter
+from .filters import CustomRecipesFilter, IngredientFilter
 from .paginator import CustomPaginator
-from .permissions import AuthorOrReadOnly
+from .permissions import AuthorOrReadOnly, ObjectIsAuthenticated
+from .serializers import (CustomUserSerializer, FavoriteSerializer,
+                          IngredientSerializer, RecipesReadSerializer,
+                          RecipesWriteSerializer, SetPasswordSerializer,
+                          ShoppingSerializer, SubscribeSerializer,
+                          TagSerializer)
 
 
 class CreateListDestroyViewSet(
-    mixins.CreateModelMixin,
-    mixins.ListModelMixin,
-    mixins.DestroyModelMixin,
-    viewsets.GenericViewSet):
+        mixins.CreateModelMixin,
+        mixins.ListModelMixin,
+        mixins.DestroyModelMixin,
+        viewsets.GenericViewSet
+        ):
     pass
 
 
 class CreateListRetrieveViewSet(
-    mixins.CreateModelMixin,
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet):
+        mixins.CreateModelMixin,
+        mixins.ListModelMixin,
+        mixins.RetrieveModelMixin,
+        viewsets.GenericViewSet):
     pass
 
 
@@ -66,7 +53,10 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
     def me(self, request):
         user = get_object_or_404(User, username=self.request.user)
         if request.method == 'GET':
-            serializer = CustomUserSerializer(user)
+            serializer = CustomUserSerializer(
+                user,
+                context={'request': request},
+                )
             return Response(serializer.data, status=status.HTTP_200_OK)
         return status.HTTP_401_UNAUTHORIZED
 
@@ -80,8 +70,12 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
         serializer = SetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = get_object_or_404(User, username=self.request.user)
-        if not user.check_password(serializer.validated_data['current_password']):
-            return Response('Неверный текущий пароль', status=status.HTTP_400_BAD_REQUEST)
+        if not user.check_password(
+                serializer.validated_data['current_password']):
+            return Response(
+                'Неверный текущий пароль',
+                status=status.HTTP_400_BAD_REQUEST
+                )
         self.request.user.set_password(serializer.data["new_password"])
         self.request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -91,19 +85,17 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
         detail=False,
         url_path='subscriptions',
         permission_classes=(IsAuthenticated,),
+        pagination_class=CustomPaginator
     )
-    def subscriptions(self, request, **kwargs):
-        
-        # queryset = request.user.subscriber.all()
+    def subscriptions(self, request):
         queryset = User.objects.filter(subscriptions__user=request.user)
         page = self.paginate_queryset(queryset)
         serializer = SubscribeSerializer(
             page,
             context={'request': request},
             many=True)
-        return self.get_paginated_response(
-            serializer.data,
-            )
+
+        return self.get_paginated_response(serializer.data)
 
     @action(
         methods=['post', 'delete'],
@@ -134,9 +126,6 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ___________________________________________________________________________
-
-
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tags.objects.all()
     serializer_class = TagSerializer
@@ -147,8 +136,8 @@ class IngredientsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredients.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('^name',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -206,7 +195,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
-            ShoppingCart.create(recipe=recipe, user=user)
+            ShoppingCart.objects.create(recipe=recipe, user=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             shopping_cart = get_object_or_404(
@@ -225,25 +214,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         ingredients = CountIngredients.objects.filter(
             recipe__shopping_recipe__user=request.user).values(
-            'ingredients__name', 'ingredients__measure_unit', 'amount'
+            'ingredients__name', 'ingredients__measurement_unit', 'amount'
             )
         shopping_cart = {}
-        print(ingredients)
         for ingredient in ingredients:
-            if ingredient["ingredients__name"] in shopping_cart.keys():
+            if ingredient['ingredients__name'] in shopping_cart.keys():
                 shopping_cart[
-                    ingredient["ingredients__name"]
-                    ][0][0] += ingredient["amount"]
+                    ingredient['ingredients__name']
+                    ][0][0] += ingredient['amount']
             else:
-                shopping_cart[ingredient["ingredients__name"]] = [
-                    ingredient["amount"]], [
-                    ingredient["ingredients__measure_unit"]
+                shopping_cart[ingredient['ingredients__name']] = [
+                    ingredient['amount']], [
+                    ingredient['ingredients__measurement_unit']
                     ]
         text_file = []
         for key, value in shopping_cart.items():
             text_file.append(f'{key} - {value[0][0]} {value[1][0]} \n')
-        print(text_file)
         name_file = 'shopping_cart.txt'
-        response = HttpResponse(list(shopping_cart), content_type='text/plain')
+        response = HttpResponse(text_file, content_type='text/plain')
         response['Content-Disposition'] = f'attachment; filename={name_file}'
         return response

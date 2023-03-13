@@ -1,22 +1,18 @@
-from rest_framework.exceptions import ValidationError
-from rest_framework import serializers, status
-from djoser.serializers import UserSerializer
-from django.contrib.auth.hashers import make_password
 import base64
-from django.core.files.base import ContentFile
 
-from users.models import User, Subscriptions
-from recipes.models import (
-    Tags,
-    Recipes,
-    Ingredients,
-    FavoriteRecipes,
-    ShoppingCart,
-    CountIngredients)
+from django.contrib.auth.hashers import make_password
+from django.core.files.base import ContentFile
+from django.db import transaction
+from djoser.serializers import UserSerializer
+from recipes.models import (CountIngredients, FavoriteRecipes, Ingredients,
+                            Recipes, ShoppingCart, Tags)
+from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
+from users.models import Subscriptions, User
 
 
 class Base64ImageField(serializers.ImageField):
-    '''Функция для декодирования изображений'''
+    """Функция для декодирования изображений"""
     def to_internal_value(self, data):
         if isinstance(data, str) and data.startswith('data:image'):
             format, imgstr = data.split(';base64,')
@@ -26,7 +22,7 @@ class Base64ImageField(serializers.ImageField):
 
 
 class CustomUserSerializer(UserSerializer):
-    '''Сериализатор пользователей'''
+    """Сериализатор пользователей"""
     is_subscribed = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True)
 
@@ -62,7 +58,7 @@ class CustomUserSerializer(UserSerializer):
 
 
 class SetPasswordSerializer(UserSerializer):
-    '''Изменение пароля'''
+    """Изменение пароля"""
     new_password = serializers.CharField(required=True)
     current_password = serializers.CharField(required=True)
 
@@ -73,9 +69,14 @@ class SetPasswordSerializer(UserSerializer):
             'current_password',
         )
 
+    def validate(self, data):
+        if data['new_password'] == data['current_password']:
+            raise ValidationError('Новый пароль не должен совпадать с текущим')
+        return data
+
 
 class RecipesSerializer(serializers.ModelSerializer):
-    '''Спикок рецептов без тегов и ингредиентов'''
+    """Спикок рецептов без тегов и ингредиентов"""
     image = Base64ImageField(read_only=True)
     name = serializers.ReadOnlyField()
     cooking_time = serializers.ReadOnlyField()
@@ -90,7 +91,7 @@ class RecipesSerializer(serializers.ModelSerializer):
 
 
 class SubscribeSerializer(CustomUserSerializer):
-    '''Подписка на пользователей'''
+    """Подписка на пользователей"""
     is_subscribed = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
     email = serializers.ReadOnlyField()
@@ -144,11 +145,8 @@ class SubscribeSerializer(CustomUserSerializer):
         return data
 
 
-# ________________________________________________
-
-
 class TagSerializer(serializers.ModelSerializer):
-    '''Список тегов'''
+    """Список тегов"""
     class Meta:
         model = Tags
         fields = (
@@ -163,34 +161,37 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    '''Список ингредиентов'''
+    """Список ингредиентов"""
+
     class Meta:
         model = Ingredients
         fields = (
             'id',
             'name',
-            'measure_unit',
+            'measurement_unit',
             )
 
 
 class CountIngredientReadSerializer(serializers.ModelSerializer):
-    '''Список игредиентов и их количество в рецепте'''
+    """Список игредиентов и их количество в рецепте"""
     id = serializers.ReadOnlyField(source='ingredients.id')
     name = serializers.ReadOnlyField(source='ingredients.name')
-    measure_unit = serializers.ReadOnlyField(source='ingredients.measure_unit')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredients.measurement_unit'
+        )
 
     class Meta:
         model = CountIngredients
         fields = (
             'id',
             'name',
-            'measure_unit',
+            'measurement_unit',
             'amount',
             )
 
 
 class RecipesReadSerializer(serializers.ModelSerializer):
-    '''Список рецептов'''
+    """Список рецептов"""
     tags = TagSerializer(many=True)
     ingredients = CountIngredientReadSerializer(
         many=True,
@@ -236,21 +237,32 @@ class RecipesReadSerializer(serializers.ModelSerializer):
 
 
 class CountIngredientWriteSerializer(serializers.ModelSerializer):
-    '''Ингредиенты и их количество для создания рецепта'''
-    id = serializers.PrimaryKeyRelatedField(
-        queryset=Ingredients.objects.all())
+    """Ингредиенты и их количество для создания рецепта"""
+    # id = serializers.PrimaryKeyRelatedField(
+    #     queryset=Ingredients.objects.all())
+    id = serializers.IntegerField(source='ingredients.id')
     amount = serializers.IntegerField()
+    name = serializers.ReadOnlyField(source='ingredients.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredients.measurement_unit'
+        )
 
     class Meta:
         model = CountIngredients
         fields = (
             'id',
+            'name',
+            'measurement_unit',
             'amount'
             )
+        read_only_fields = (
+            'name',
+            'measurement_unit',
+        )
 
 
 class RecipesWriteSerializer(serializers.ModelSerializer):
-    '''Создание, изменение, и удаление рецепта'''
+    """Создание, изменение, и удаление рецепта"""
     tags = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Tags.objects.all())
@@ -278,27 +290,35 @@ class RecipesWriteSerializer(serializers.ModelSerializer):
             'cooking_time'
         )
 
+    @transaction.atomic
     def tag_selection(self, recipe, tags):
         for tag in tags:
             recipe.tags.add(tag)
 
-    def ingredient_selection(self, recipe, ingredients):
-        for ingredient in ingredients:
-            print(ingredient)
-            ingredient_id = ingredient['id']
-            print(ingredient_id)
-            amount = ingredient.get('amount')
-            CountIngredients.objects.create(
-                recipe=recipe,
-                ingredients=ingredient_id,
-                amount=amount
-            )
+    @transaction.atomic
+    def ingredient_selection(self, instance, validated_data):
+        ingredients_add = []
+        for ingredient in validated_data:
+            if ingredient['ingredients'] in ingredients_add:
+                raise ValidationError(
+                    'Ингредиенты не должны повторяться'
+                )
+            ingredients_add.append(ingredient['ingredients'])
+        ingredients_add.clear()
+        CountIngredients.objects.bulk_create(
+            [CountIngredients(
+                recipe=instance,
+                ingredients=Ingredients.objects.get(
+                    pk=ingredient['ingredients']['id']
+                ),
+                amount=ingredient['amount']
+            ) for ingredient in validated_data]
+        )
 
+    @transaction.atomic
     def create(self, validated_data):
-        print(validated_data)
-        ingredients = validated_data.pop('count_in_recipe')
-        print(ingredients)
         tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('count_in_recipe')
         recipe = Recipes.objects.create(
             author=self.context.get('request').user,
             **validated_data)
@@ -306,16 +326,13 @@ class RecipesWriteSerializer(serializers.ModelSerializer):
         self.ingredient_selection(recipe, ingredients)
         return recipe
 
+    @transaction.atomic
     def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.image = validated_data.get('image', instance.image)
-        instance.cooking_time = validated_data.get(
-            'cooking_time', instance.cooking_time
-            )
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('count_in_recipe')
-        CountIngredients.objects.filter(recipe=instance).all().delete()
+        instance = super().update(instance, validated_data)
+        instance.tags.clear()
+        instance.ingredients.clear()
         self.tag_selection(instance, tags)
         self.ingredient_selection(instance, ingredients)
         instance.save()
@@ -341,7 +358,7 @@ class RecipesWriteSerializer(serializers.ModelSerializer):
 
 
 class FavoriteSerializer(RecipesSerializer):
-    '''Добавление и удаление избранного рецепта'''
+    """Добавление и удаление избранного рецепта"""
     class Meta:
         model = Recipes
         fields = (
@@ -363,7 +380,7 @@ class FavoriteSerializer(RecipesSerializer):
 
 
 class ShoppingSerializer(RecipesSerializer):
-    '''Список покупок. Добавление и удаление'''
+    """Список покупок. Добавление и удаление"""
     class Meta:
         model = Recipes
         fields = (

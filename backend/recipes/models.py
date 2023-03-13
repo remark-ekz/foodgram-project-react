@@ -1,6 +1,7 @@
+from colorfield.fields import ColorField
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from users.models import User
-from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class Tags(models.Model):
@@ -8,10 +9,7 @@ class Tags(models.Model):
         'Имя',
         max_length=200
         )
-    color = models.CharField(
-        'Цвет в HEX',
-        max_length=7,
-        null=True)
+    color = ColorField(format="hexa")
     slug = models.SlugField(
         max_length=200,
         unique=True)
@@ -28,7 +26,7 @@ class Ingredients(models.Model):
     name = models.CharField(
         'Название',
         max_length=200)
-    measure_unit = models.CharField(
+    measurement_unit = models.CharField(
         'Единица измерения',
         max_length=10)
 
@@ -37,7 +35,7 @@ class Ingredients(models.Model):
         verbose_name_plural = 'Ингредиенты'
 
     def __str__(self):
-        return f'{self.name} - {self.measure_unit}'
+        return f'{self.name} - {self.measurement_unit}'
 
 
 class Recipes(models.Model):
@@ -53,8 +51,12 @@ class Recipes(models.Model):
     cooking_time = models.IntegerField(
         'Время приготовления, мин',
         validators=[
-            MinValueValidator(1),
-            MaxValueValidator(1000)
+            MinValueValidator(
+                1,
+                message='Используйте значение больше 1'),
+            MaxValueValidator(
+                1000,
+                message='Используйте значение меньше 1000')
         ]
     )
     ingredients = models.ManyToManyField(
@@ -65,7 +67,7 @@ class Recipes(models.Model):
     tags = models.ManyToManyField(Tags)
     image = models.ImageField(
         'Изображение',
-        upload_to='recipes/images/',
+        upload_to='recipes/',
         blank=True)
     pub_date = models.DateTimeField(
         'Дата публикации',
@@ -96,20 +98,18 @@ class CountIngredients(models.Model):
     )
     amount = models.IntegerField(
         validators=[
-            MinValueValidator(1),
-            MaxValueValidator(100000)],
+            MinValueValidator(
+                1,
+                message='Используйте значение больше 1'),
+            MaxValueValidator(
+                100000,
+                message='Используйте значение больше 100000')],
         verbose_name='Количество'
     )
 
     class Meta:
         verbose_name = 'Количество'
         verbose_name_plural = 'Количество'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['recipe', 'ingredients'],
-                name='unique_ingridient'
-            )
-        ]
 
     def __str__(self) -> str:
         return f'{self.ingredients} - {self.amount}'
