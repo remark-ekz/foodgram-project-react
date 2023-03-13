@@ -8,7 +8,7 @@ class Tags(models.Model):
     name = models.CharField(
         'Имя',
         max_length=200
-        )
+    )
     color = ColorField(format="hexa")
     slug = models.SlugField(
         max_length=200,
@@ -63,7 +63,7 @@ class Recipes(models.Model):
         Ingredients,
         through='CountIngredients',
         verbose_name='Ингредиенты'
-        )
+    )
     tags = models.ManyToManyField(Tags)
     image = models.ImageField(
         'Изображение',
@@ -89,7 +89,7 @@ class CountIngredients(models.Model):
         on_delete=models.CASCADE,
         related_name='count_in_recipe',
         verbose_name='Название рецепта'
-        )
+    )
     ingredients = models.ForeignKey(
         Ingredients,
         on_delete=models.CASCADE,

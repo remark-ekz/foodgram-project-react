@@ -24,8 +24,7 @@ class CreateListDestroyViewSet(
         mixins.CreateModelMixin,
         mixins.ListModelMixin,
         mixins.DestroyModelMixin,
-        viewsets.GenericViewSet
-        ):
+        viewsets.GenericViewSet):
     pass
 
 
@@ -56,7 +55,7 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
             serializer = CustomUserSerializer(
                 user,
                 context={'request': request},
-                )
+            )
             return Response(serializer.data, status=status.HTTP_200_OK)
         return status.HTTP_401_UNAUTHORIZED
 
@@ -75,7 +74,7 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
             return Response(
                 'Неверный текущий пароль',
                 status=status.HTTP_400_BAD_REQUEST
-                )
+            )
         self.request.user.set_password(serializer.data["new_password"])
         self.request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -115,7 +114,7 @@ class CustomUserViewSet(CreateListRetrieveViewSet):
             Subscriptions.objects.create(
                 user=user,
                 author=author
-                )
+            )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         if request.method == 'DELETE':
             subscription = get_object_or_404(
@@ -159,7 +158,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
         url_path='favorite',
         permission_classes=(IsAuthenticated,),
-        )
+    )
     def favorite(self, request, **kwargs):
         recipe = get_object_or_404(Recipes, id=kwargs['pk'])
         user = request.user
@@ -186,7 +185,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         detail=True,
         url_path='shopping_cart',
         permission_classes=(IsAuthenticated,),
-        )
+    )
     def shopping_cart(self, request, **kwargs):
         recipe = get_object_or_404(Recipes, id=kwargs['pk'])
         user = request.user
@@ -206,30 +205,29 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 user=user)
             shopping_cart.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
-        return
 
     @action(
         methods=['get'],
         detail=False,
         url_path='download_shopping_cart',
         permission_classes=(IsAuthenticated,),
-        )
+    )
     def download_shopping_cart(self, request):
         ingredients = CountIngredients.objects.filter(
             recipe__shopping_recipe__user=request.user).values(
             'ingredients__name', 'ingredients__measurement_unit', 'amount'
-            )
+        )
         shopping_cart = {}
         for ingredient in ingredients:
             if ingredient['ingredients__name'] in shopping_cart.keys():
                 shopping_cart[
                     ingredient['ingredients__name']
-                    ][0][0] += ingredient['amount']
+                ][0][0] += ingredient['amount']
             else:
                 shopping_cart[ingredient['ingredients__name']] = [
                     ingredient['amount']], [
                     ingredient['ingredients__measurement_unit']
-                    ]
+                ]
         text_file = []
         for key, value in shopping_cart.items():
             text_file.append(f'{key} - {value[0][0]} {value[1][0]} \n')

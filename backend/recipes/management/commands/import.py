@@ -20,6 +20,6 @@ class Command(BaseCommand):
                 ingredients = Ingredients(
                     name=string['name'],
                     measure_unit=string['measure_unit']
-                    )
+                )
                 ingredients.save()
             print('Загрузка завершена')

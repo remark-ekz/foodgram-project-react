@@ -14,7 +14,7 @@ class UserAdmin(UserAdmin):
         'last_name',
         'password',
         'admin'
-        )
+    )
     list_editable = ('password', )
     search_fields = ('username', 'email')
     list_filter = ('username', 'email')

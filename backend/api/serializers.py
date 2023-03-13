@@ -115,7 +115,7 @@ class SubscribeSerializer(CustomUserSerializer):
             'username',
             'first_name',
             'last_name'
-            )
+        )
 
     def get_is_subscribed(self, obj):
         user = self.context['request'].user
@@ -124,7 +124,7 @@ class SubscribeSerializer(CustomUserSerializer):
             and Subscriptions.objects.filter(
                 user=user,
                 author=obj).exists()
-                )
+        )
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
@@ -169,7 +169,7 @@ class IngredientSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'measurement_unit',
-            )
+        )
 
 
 class CountIngredientReadSerializer(serializers.ModelSerializer):
@@ -178,7 +178,7 @@ class CountIngredientReadSerializer(serializers.ModelSerializer):
     name = serializers.ReadOnlyField(source='ingredients.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredients.measurement_unit'
-        )
+    )
 
     class Meta:
         model = CountIngredients
@@ -187,7 +187,7 @@ class CountIngredientReadSerializer(serializers.ModelSerializer):
             'name',
             'measurement_unit',
             'amount',
-            )
+        )
 
 
 class RecipesReadSerializer(serializers.ModelSerializer):
@@ -196,7 +196,7 @@ class RecipesReadSerializer(serializers.ModelSerializer):
     ingredients = CountIngredientReadSerializer(
         many=True,
         source='count_in_recipe'
-        )
+    )
     author = CustomUserSerializer(read_only=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -223,7 +223,7 @@ class RecipesReadSerializer(serializers.ModelSerializer):
             return FavoriteRecipes.objects.filter(
                 user=user,
                 recipe=obj
-                ).exists()
+            ).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
@@ -232,20 +232,18 @@ class RecipesReadSerializer(serializers.ModelSerializer):
             return ShoppingCart.objects.filter(
                 user=user,
                 recipe=obj
-                ).exists()
+            ).exists()
         return False
 
 
 class CountIngredientWriteSerializer(serializers.ModelSerializer):
     """Ингредиенты и их количество для создания рецепта"""
-    # id = serializers.PrimaryKeyRelatedField(
-    #     queryset=Ingredients.objects.all())
     id = serializers.IntegerField(source='ingredients.id')
     amount = serializers.IntegerField()
     name = serializers.ReadOnlyField(source='ingredients.name')
     measurement_unit = serializers.ReadOnlyField(
         source='ingredients.measurement_unit'
-        )
+    )
 
     class Meta:
         model = CountIngredients
@@ -254,7 +252,7 @@ class CountIngredientWriteSerializer(serializers.ModelSerializer):
             'name',
             'measurement_unit',
             'amount'
-            )
+        )
         read_only_fields = (
             'name',
             'measurement_unit',
@@ -269,7 +267,7 @@ class RecipesWriteSerializer(serializers.ModelSerializer):
     ingredients = CountIngredientWriteSerializer(
         many=True,
         source='count_in_recipe'
-        )
+    )
     author = CustomUserSerializer(read_only=True)
     is_favorited = serializers.SerializerMethodField()
     is_in_shopping_cart = serializers.SerializerMethodField()
@@ -344,7 +342,7 @@ class RecipesWriteSerializer(serializers.ModelSerializer):
             return FavoriteRecipes.objects.filter(
                 user=user,
                 recipe=obj
-                ).exists()
+            ).exists()
         return False
 
     def get_is_in_shopping_cart(self, obj):
@@ -353,7 +351,7 @@ class RecipesWriteSerializer(serializers.ModelSerializer):
             return ShoppingCart.objects.filter(
                 user=user,
                 recipe=obj
-                ).exists()
+            ).exists()
         return False
 
 
