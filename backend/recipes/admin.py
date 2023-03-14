@@ -45,7 +45,6 @@ class RecipesAdmin(admin.ModelAdmin):
         'name',
         'author',
         'tags')
-    readonly_fields = ('in_favorites',)
     empty_value_display = '-пусто-'
 
 
