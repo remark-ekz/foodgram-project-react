@@ -14,12 +14,12 @@ class Command(BaseCommand):
         with open(MYPATH + '/' + FILENAME, encoding='utf-8') as csv_file:
             csv_reader = csv.DictReader(
                 csv_file,
-                fieldnames=['name', 'measure_unit'],
+                fieldnames=['name', 'measurement_unit'],
                 delimiter=',')
             for string in csv_reader:
                 ingredients = Ingredients(
                     name=string['name'],
-                    measure_unit=string['measure_unit']
+                    measure_unit=string['measurement_unit']
                 )
                 ingredients.save()
             print('Загрузка завершена')
