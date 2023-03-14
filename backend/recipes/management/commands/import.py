@@ -19,7 +19,7 @@ class Command(BaseCommand):
             for string in csv_reader:
                 ingredients = Ingredients(
                     name=string['name'],
-                    measure_unit=string['measurement_unit']
+                    measurement_unit=string['measurement_unit']
                 )
                 ingredients.save()
             print('Загрузка завершена')
