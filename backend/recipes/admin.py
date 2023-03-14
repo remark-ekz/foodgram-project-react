@@ -35,7 +35,8 @@ class RecipesAdmin(admin.ModelAdmin):
         'name',
         'author',
         'cooking_time',
-        'in_favorites')
+    )
+
     list_editable = (
         'name',
         'cooking_time',
@@ -46,10 +47,6 @@ class RecipesAdmin(admin.ModelAdmin):
         'tags')
     readonly_fields = ('in_favorites',)
     empty_value_display = '-пусто-'
-
-    @admin.display(description='Избранное')
-    def in_favorites(self, obj):
-        return obj.favorite_recipes.count()
 
 
 @admin.register(CountIngredients)
