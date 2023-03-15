@@ -63,12 +63,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-# #     }
-# }
 DATABASES = {
     'default': {
         'ENGINE': os.getenv('DB_ENGINE'),
@@ -136,5 +130,3 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 1, }
 
 CORS_ORIGIN_ALLOW_ALL = True
-
-# CORS_URLS_REGEX = r'^/api/.*$'

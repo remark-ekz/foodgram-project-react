@@ -8,7 +8,6 @@ services:
       - ./.env
   
   backend:
-    # build: ../backend
     image: remarkekz/backend:latest
     restart: always
     volumes:
@@ -20,7 +19,6 @@ services:
       - ./.env
 
   frontend:
-    # build: ../frontend
     image: remarkekz/frontend:v1.03.2023
     volumes:
       - ../frontend/:/app/result_build/
