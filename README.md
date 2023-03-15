@@ -174,4 +174,3 @@ docker-compose exec backend python manage.py import
 ```
 http:/<ip_address>/admin/
 ```
-* Для проверки работоспособности приложения, перейти на страницу
