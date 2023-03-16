@@ -31,7 +31,7 @@ password: y
 # Документация
 
 Для просмотра документации к API перейдите по адресу:
-- http://51.250.95.95/api/redoc
+- http://51.250.95.95/api/docs/
 
 ## Начало работы
 * Клонировать репозиторий, перейти в директорию с проектом:
@@ -147,12 +147,16 @@ sudo docker-compose --version
   ```
   scp nginx.conf <username>@<ip_address>:/home/<username>/nginx.conf
   ```
-
+    * перейти в директорию с файлом ```openapi-schema.yml и redoc.html``` и выполните:
+  ```
+  scp  openapi-schema.yml <username>@<ip_address>:/home/docs/
+  ```
+  ```
+  scp  redoc.html <username>@<ip_address>:/home/docs/
+  ```
+  
 ## После успешного деплоя
-* Создать миграции:
-```
-docker-compose exec backend python manage.py makemigrations
-```
+
 * Применить миграции:
 ```
 docker-compose exec backend python manage.py migrate
@@ -169,9 +173,9 @@ docker-compose exec backend python manage.py collectstatic --no-input
 ```
 docker-compose exec backend python manage.py import
 ```
+* Через админ панель заполните теги
 
 * Для проверки работоспособности приложения, перейти на страницу:
 ```
 http:/<ip_address>/admin/
 ```
-* Для проверки работоспособности приложения, перейти на страницу
